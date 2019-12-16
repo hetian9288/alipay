@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/smartwalle/alipay/encoding"
+	"gitee.com/hetian9288/ganengouapi/sdkApis/alipay/encoding"
 )
 
 type AliPay struct {
@@ -76,6 +76,38 @@ func (this *AliPay) URLValues(param AliPayParam) (value url.Values, err error) {
 	return p, nil
 }
 
+// 生成客户端autoinfo用
+func (this *AliPay) URLValues2(param AliPayParam) (value url.Values, err error) {
+	var p = url.Values{}
+	p.Add("app_id", this.appId)
+	p.Add("method", param.APIName())
+	p.Add("sign_type", this.SignType)
+
+	if len(param.ExtJSONParamName()) > 0 {
+		p.Add(param.ExtJSONParamName(), param.ExtJSONParamValue())
+	}
+
+	var ps = param.Params()
+	if ps != nil {
+		for key, value := range ps {
+			p.Add(key, value)
+		}
+	}
+
+	var hash crypto.Hash
+	if this.SignType == K_SIGN_TYPE_RSA {
+		hash = crypto.SHA1
+	} else {
+		hash = crypto.SHA256
+	}
+	sign, err := signWithPKCS1v15(p, this.privateKey, hash)
+	if err != nil {
+		return nil, err
+	}
+	p.Add("sign", sign)
+	return p, nil
+}
+
 func (this *AliPay) doRequest(method string, param AliPayParam, results interface{}) (err error) {
 	var buf io.Reader
 	if param != nil {
@@ -104,7 +136,7 @@ func (this *AliPay) doRequest(method string, param AliPayParam, results interfac
 	if err != nil {
 		return err
 	}
-
+	//fmt.Println(string(data))
 	if len(this.AliPayPublicKey) > 0 {
 		var dataStr = string(data)
 
